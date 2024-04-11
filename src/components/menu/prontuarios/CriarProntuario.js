@@ -18,6 +18,7 @@ import {
     TableHead,
     TableRow,
     TextField,
+    createFilterOptions,
 } from "@mui/material";
 import {
     collection,
@@ -157,6 +158,11 @@ const ProntuarioEletronico = () => {
         getOptionLabel: (option) => option.nome + " " + option.cpf,
     };
 
+    const defaultFilterOptions = createFilterOptions();
+    const filterOptions = (options, state) => {
+        return defaultFilterOptions(options, state).slice(0, 6);
+    };
+
     return (
         <div className="prontuario-wrapper">
             <MenuPrincipal />
@@ -165,8 +171,10 @@ const ProntuarioEletronico = () => {
                     {...defaultProps}
                     id="paciente"
                     clearOnEscape
+                    filterOptions={filterOptions}
                     size="small"
                     getOptionKey={(option) => option.id}
+                    limitTags={4}
                     onChange={(e, value) => {
                         if (!value) {
                             return;
