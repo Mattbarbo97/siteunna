@@ -1,5 +1,4 @@
 import SaveIcon from "@mui/icons-material/Save";
-import SearchIcon from "@mui/icons-material/Search";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import {
     Autocomplete,
@@ -21,14 +20,14 @@ import {
     TextField,
 } from "@mui/material";
 import {
-    addDoc,
     collection,
+    doc,
     getDocs,
     getFirestore,
-    query,
-    where,
+    setDoc,
 } from "firebase/firestore";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
+import { useUser } from "../../../context/UserContext";
 import { firestore } from "../../../firebase";
 import MenuPrincipal from "../MenuPrincipal";
 import PedidoExame from "./PedidoExame";
@@ -36,16 +35,16 @@ import "./ProntuarioStyles.css";
 import Receituario from "./Receituario";
 
 const ProntuarioEletronico = () => {
-    const [termoPesquisa, setTermoPesquisa] = useState("");
-    const [dataNascimento, setDataNascimento] = useState("");
+    const [pacienteSelecionado, setPacienteSelecionado] = useState({});
     const [textoLivre, setTextoLivre] = useState("");
     const [loading, setLoading] = useState(false);
-    const [resultadosPesquisa, setResultadosPesquisa] = useState([]);
     const [modalPedidoExameAberto, setModalPedidoExameAberto] = useState(false);
     const [modalReceituarioAberto, setModalReceituarioAberto] = useState(false);
     const [historico, setHistorico] = useState([]);
     const [dialogHistoricoAberto, setDialogHistoricoAberto] = useState(false);
     const [pacientes, setPacientes] = useState([]);
+
+    const { user } = useUser();
 
     const toggleModalPedidoExame = () => {
         setModalPedidoExameAberto(!modalPedidoExameAberto);
@@ -81,52 +80,66 @@ const ProntuarioEletronico = () => {
         listarPacientes();
     }, []);
 
-    // Função para buscar pacientes
-    const handleSearch = async () => {
-        if (!termoPesquisa || !dataNascimento) {
-            //  exibir algum feedback para o usuário com a daata de nascimento do paciente
-            return;
-        }
-        setLoading(true);
-        try {
-            const q = query(
-                collection(firestore, "pacientes_cadastrados"),
-                where("nome", "==", termoPesquisa),
-                where("dataNascimento", "==", dataNascimento)
-            );
-            const querySnapshot = await getDocs(q);
-            const pacientes = [];
-            querySnapshot.forEach((doc) => {
-                pacientes.push({ id: doc.id, ...doc.data() });
-            });
-            setResultadosPesquisa(pacientes);
-            // Supondo que você tenha uma função para buscar o histórico aqui
-        } catch (error) {
-            console.error("Erro na pesquisa:", error);
-        }
-        setLoading(false);
-    };
-
     // Função para salvar anotações do prontuário
     const salvarAnotacoes = async () => {
-        if (!textoLivre) {
+        if (!textoLivre || !pacienteSelecionado.id) {
             // Adicione uma lógica para lidar com a ausência de texto
             return;
         }
         setLoading(true);
         try {
-            await addDoc(collection(firestore, "historico_paciente"), {
+            const dados = {
                 texto: textoLivre,
                 data: new Date(),
-                // Adicione aqui outras propriedades necessárias
-            });
+                user_id: pacienteSelecionado.id,
+                medico: user.name,
+            };
+
+            const historicoCollection = collection(
+                firestore,
+                "historico_paciente"
+            );
+            await setDoc(doc(historicoCollection), dados);
+            // Limpe o campo de texto após salvar
             setTextoLivre("");
             // Atualize o histórico do paciente após salvar
+            buscarAnotacoes();
         } catch (error) {
             console.error("Erro ao salvar anotações:", error);
         }
         setLoading(false);
     };
+
+    const buscarAnotacoes = useCallback(async () => {
+        if (!pacienteSelecionado.id) {
+            return;
+        }
+        setLoading(true);
+        try {
+            const historicoCollection = collection(
+                firestore,
+                "historico_paciente"
+            );
+            const historicoSnapshot = await getDocs(historicoCollection);
+            const historicoList = historicoSnapshot.docs
+                .map((doc) => ({
+                    id: doc.id,
+                    ...doc.data(),
+                }))
+                .filter(
+                    (registro) => registro.user_id === pacienteSelecionado.id
+                );
+            setHistorico(historicoList);
+            console.log(historicoList);
+        } catch (error) {
+            console.log(error);
+        }
+        setLoading(false);
+    }, [pacienteSelecionado]);
+
+    useEffect(() => {
+        buscarAnotacoes();
+    }, [pacienteSelecionado, buscarAnotacoes]);
 
     // Função para abrir o diálogo de histórico completo
     const abrirDialogHistorico = () => {
@@ -154,7 +167,7 @@ const ProntuarioEletronico = () => {
                     size="small"
                     getOptionKey={(option) => option.id}
                     onChange={(e, value) => {
-                        setTermoPesquisa(value || "");
+                        setPacienteSelecionado(value);
                     }}
                     renderInput={(params) => (
                         <TextField
@@ -164,9 +177,6 @@ const ProntuarioEletronico = () => {
                         />
                     )}
                 />
-                <IconButton onClick={handleSearch}>
-                    <SearchIcon />
-                </IconButton>
             </Box>
 
             <Box className="container">
@@ -184,9 +194,10 @@ const ProntuarioEletronico = () => {
                 >
                     Emitir Receituário
                 </Button>
+            </Box>
 
-                {/* Campo de texto livre para anotações */}
-
+            {/* Campo de texto livre para anotações */}
+            <Box>
                 <TextField
                     label="Anotações do Prontuário"
                     multiline
@@ -224,9 +235,9 @@ const ProntuarioEletronico = () => {
                     <TableBody>
                         {historico.map((registro) => (
                             <TableRow key={registro.id}>
-                                <TableCell>{registro.data}</TableCell>
+                                <TableCell>01/02/0301</TableCell>
                                 <TableCell>{registro.medico}</TableCell>
-                                <TableCell>{registro.descricao}</TableCell>
+                                <TableCell>{registro.texto}</TableCell>
                                 <TableCell>
                                     {/* Botão para visualizar detalhes do prontuário */}
                                     <IconButton
