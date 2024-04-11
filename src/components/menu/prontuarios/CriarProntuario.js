@@ -29,6 +29,7 @@ import {
 import React, { useCallback, useEffect, useState } from "react";
 import { useUser } from "../../../context/UserContext";
 import { firestore } from "../../../firebase";
+import formatDate from "../../../utils/formatDate";
 import MenuPrincipal from "../MenuPrincipal";
 import PedidoExame from "./PedidoExame";
 import "./ProntuarioStyles.css";
@@ -167,6 +168,9 @@ const ProntuarioEletronico = () => {
                     size="small"
                     getOptionKey={(option) => option.id}
                     onChange={(e, value) => {
+                        if (!value) {
+                            return;
+                        }
                         setPacienteSelecionado(value);
                     }}
                     renderInput={(params) => (
@@ -235,7 +239,9 @@ const ProntuarioEletronico = () => {
                     <TableBody>
                         {historico.map((registro) => (
                             <TableRow key={registro.id}>
-                                <TableCell>01/02/0301</TableCell>
+                                <TableCell>
+                                    {formatDate(registro.data.toDate())}
+                                </TableCell>
                                 <TableCell>{registro.medico}</TableCell>
                                 <TableCell>{registro.texto}</TableCell>
                                 <TableCell>
