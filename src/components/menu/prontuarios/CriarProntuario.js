@@ -5,10 +5,6 @@ import {
     Box,
     Button,
     CircularProgress,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogTitle,
     IconButton,
     Paper,
     Table,
@@ -31,31 +27,20 @@ import React, { useCallback, useEffect, useState } from "react";
 import { useUser } from "../../../context/UserContext";
 import { firestore } from "../../../firebase";
 import formatDate from "../../../utils/formatDate";
+import takeFirst80Char from "../../../utils/takeFirst80Char";
 import MenuPrincipal from "../MenuPrincipal";
-import PedidoExame from "./PedidoExame";
+import MedicalConsultationModal from "./MedicalConsultationModal";
 import "./ProntuarioStyles.css";
-import Receituario from "./Receituario";
 
 const ProntuarioEletronico = () => {
     const [pacienteSelecionado, setPacienteSelecionado] = useState({});
     const [textoLivre, setTextoLivre] = useState("");
     const [loading, setLoading] = useState(false);
-    const [modalPedidoExameAberto, setModalPedidoExameAberto] = useState(false);
-    const [modalReceituarioAberto, setModalReceituarioAberto] = useState(false);
     const [historico, setHistorico] = useState([]);
-    const [dialogHistoricoAberto, setDialogHistoricoAberto] = useState(false);
     const [pacientes, setPacientes] = useState([]);
+    const [modalConsultaAberto, setModalConsultaAberto] = useState(false);
 
     const { user } = useUser();
-
-    const toggleModalPedidoExame = () => {
-        setModalPedidoExameAberto(!modalPedidoExameAberto);
-    };
-
-    // Função de toggle para o modal de Receituário
-    const toggleModalReceituario = () => {
-        setModalReceituarioAberto(!modalReceituarioAberto);
-    };
 
     useEffect(() => {
         const firestore = getFirestore();
@@ -117,6 +102,7 @@ const ProntuarioEletronico = () => {
             return;
         }
         setLoading(true);
+        // Buscar anotações do paciente selecionado com order by data
         try {
             const historicoCollection = collection(
                 firestore,
@@ -130,7 +116,8 @@ const ProntuarioEletronico = () => {
                 }))
                 .filter(
                     (registro) => registro.user_id === pacienteSelecionado.id
-                );
+                )
+                .sort((a, b) => b.data.toDate() - a.data.toDate());
             setHistorico(historicoList);
             console.log(historicoList);
         } catch (error) {
@@ -142,16 +129,6 @@ const ProntuarioEletronico = () => {
     useEffect(() => {
         buscarAnotacoes();
     }, [pacienteSelecionado, buscarAnotacoes]);
-
-    // Função para abrir o diálogo de histórico completo
-    const abrirDialogHistorico = () => {
-        setDialogHistoricoAberto(true);
-    };
-
-    // Função para fechar o diálogo de histórico completo
-    const fecharDialogHistorico = () => {
-        setDialogHistoricoAberto(false);
-    };
 
     const defaultProps = {
         options: pacientes,
@@ -194,15 +171,16 @@ const ProntuarioEletronico = () => {
             <Box className="container">
                 <Button
                     variant="contained"
-                    onClick={toggleModalPedidoExame}
+                    onClick={() => setModalConsultaAberto(true)}
                     startIcon={<SaveIcon />}
+                    disabled={!pacienteSelecionado.id}
                 >
                     Solicitar Exame
                 </Button>
                 <Button
                     variant="contained"
-                    onClick={toggleModalReceituario}
                     startIcon={<SaveIcon />}
+                    disabled={!pacienteSelecionado.id}
                 >
                     Emitir Receituário
                 </Button>
@@ -228,6 +206,7 @@ const ProntuarioEletronico = () => {
                     startIcon={<SaveIcon />}
                     onClick={salvarAnotacoes}
                     sx={{ mt: 2 }}
+                    disabled={!pacienteSelecionado.id}
                 >
                     Salvar Anotações
                 </Button>
@@ -251,11 +230,13 @@ const ProntuarioEletronico = () => {
                                     {formatDate(registro.data.toDate())}
                                 </TableCell>
                                 <TableCell>{registro.medico}</TableCell>
-                                <TableCell>{registro.texto}</TableCell>
+                                <TableCell>
+                                    {takeFirst80Char(registro.texto)}
+                                </TableCell>
                                 <TableCell>
                                     {/* Botão para visualizar detalhes do prontuário */}
                                     <IconButton
-                                        onClick={() => abrirDialogHistorico()}
+                                    // onClick={() => abrirDialogHistorico()}
                                     >
                                         <VisibilityIcon />
                                     </IconButton>
@@ -266,37 +247,7 @@ const ProntuarioEletronico = () => {
                 </Table>
             </TableContainer>
 
-            {/* Modais */}
-            <PedidoExame
-                open={modalPedidoExameAberto}
-                onClose={toggleModalPedidoExame}
-                PaperProps={{
-                    sx: {
-                        height: '100vh' // Ajusta a altura para 100vh
-                    }
-                }}
-            />
-            <Receituario
-                open={modalReceituarioAberto}
-                onClose={toggleModalReceituario}
-            />
-
-            {/* Dialog de visualização do histórico completo */}
-            <Dialog
-                open={dialogHistoricoAberto}
-                onClose={fecharDialogHistorico}
-                maxWidth="lg"
-                fullWidth
-            >
-                <DialogTitle>Histórico Completo do Paciente</DialogTitle>
-                <DialogContent>
-                    {/* Conteúdo do histórico completo do paciente */}
-                    {/* Este conteúdo precisaria ser dinamicamente carregado com base no paciente selecionado */}
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={fecharDialogHistorico}>Fechar</Button>
-                </DialogActions>
-            </Dialog>
+            <MedicalConsultationModal open={modalConsultaAberto} />
 
             {/* Carregando, se necessário */}
             {loading && (
