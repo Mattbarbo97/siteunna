@@ -1,9 +1,8 @@
-import SaveIcon from "@mui/icons-material/Save";
+import { Button, Grid, Typography } from "@material-ui/core";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import {
     Autocomplete,
     Box,
-    Button,
     CircularProgress,
     IconButton,
     Paper,
@@ -33,7 +32,19 @@ import MedicalConsultationModal from "./MedicalConsultationModal";
 import "./ProntuarioStyles.css";
 
 const ProntuarioEletronico = () => {
-    const [pacienteSelecionado, setPacienteSelecionado] = useState({});
+    const [pacienteSelecionado, setPacienteSelecionado] = useState({
+        id: "",
+        nome: "",
+        dataNascimento: "",
+        genero: "",
+        telefone: "",
+        email: "",
+        endereco: "",
+        numeroResidencia: "",
+        bairro: "",
+        cidade: "",
+        estado: "",
+    });
     const [textoLivre, setTextoLivre] = useState("");
     const [loading, setLoading] = useState(false);
     const [historico, setHistorico] = useState([]);
@@ -167,50 +178,113 @@ const ProntuarioEletronico = () => {
                     )}
                 />
             </Box>
-
-            <Box className="container">
-                <Button
-                    variant="contained"
-                    onClick={() => setModalConsultaAberto(true)}
-                    startIcon={<SaveIcon />}
-                    disabled={!pacienteSelecionado.id}
+            <Paper
+                className="informacoes-paciente"
+                sx={{
+                    padding: 2,
+                }}
+            >
+                <Typography
+                    style={{
+                        fontSize: "1.5rem",
+                        fontWeight: "bold",
+                    }}
                 >
-                    Solicitar Exame
-                </Button>
-                <Button
-                    variant="contained"
-                    startIcon={<SaveIcon />}
-                    disabled={!pacienteSelecionado.id}
-                >
-                    Emitir Receituário
-                </Button>
-            </Box>
+                    Informações do Paciente
+                </Typography>
+                <Grid container spacing={1}>
+                    <Grid item xs={12} sm={6}>
+                        <Box
+                            sx={{
+                                display: "flex",
+                                flexDirection: "row",
+                                gap: 2,
+                            }}
+                        >
+                            <Typography variant="h6">Nome:</Typography>
+                            <Typography variant="h6">
+                                {pacienteSelecionado.nome}
+                            </Typography>
+                        </Box>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                        <Box
+                            sx={{
+                                display: "flex",
+                                flexDirection: "row",
+                                gap: 2,
+                            }}
+                        >
+                            <Typography variant="h6">
+                                Data de Nascimento:
+                            </Typography>
+                            <Typography variant="h6">
+                                {pacienteSelecionado.dataNascimento}
+                            </Typography>
+                        </Box>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                        <Box
+                            sx={{
+                                display: "flex",
+                                flexDirection: "row",
+                                gap: 2,
+                            }}
+                        >
+                            <Typography variant="h6">Genero:</Typography>
+                            <Typography variant="h6">
+                                {pacienteSelecionado.genero}
+                            </Typography>
+                        </Box>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                        <Box
+                            sx={{
+                                display: "flex",
+                                flexDirection: "row",
+                                gap: 2,
+                            }}
+                        >
+                            <Typography variant="h6">Telefone:</Typography>
+                            <Typography variant="h6">
+                                {pacienteSelecionado.telefone}
+                            </Typography>
+                        </Box>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                        <Box
+                            sx={{
+                                display: "flex",
+                                flexDirection: "row",
+                                gap: 2,
+                            }}
+                        >
+                            <Typography variant="h6">E-mail:</Typography>
+                            <Typography variant="h6">
+                                {pacienteSelecionado.email}
+                            </Typography>
+                        </Box>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                        <Typography variant="h6">
+                            Endereço: {pacienteSelecionado.endereco} -{" "}
+                            {pacienteSelecionado.numeroResidencia} -{" "}
+                            {pacienteSelecionado.bairro} -{" "}
+                            {pacienteSelecionado.cidade} -{" "}
+                            {pacienteSelecionado.estado}
+                        </Typography>
+                    </Grid>
+                </Grid>
+            </Paper>
 
-            {/* Campo de texto livre para anotações */}
-            <Box>
-                <TextField
-                    label="Anotações do Prontuário"
-                    multiline
-                    rows={4}
-                    value={textoLivre}
-                    onChange={(e) => setTextoLivre(e.target.value)}
-                    variant="outlined"
-                    fullWidth
-                    margin="normal"
-                />
-
-                {/* Botão para salvar as anotações no histórico */}
-                <Button
-                    variant="contained"
-                    color="primary"
-                    startIcon={<SaveIcon />}
-                    onClick={salvarAnotacoes}
-                    sx={{ mt: 2 }}
-                    disabled={!pacienteSelecionado.id}
-                >
-                    Salvar Anotações
-                </Button>
-            </Box>
+            <Button
+                onClick={() => setModalConsultaAberto(true)}
+                variant="contained"
+                color="primary"
+                sx={{ mt: 2 }}
+            >
+                Nova Consulta
+            </Button>
 
             {/* Tabela de histórico do prontuário */}
             <TableContainer component={Paper} sx={{ mt: 2 }}>
@@ -247,7 +321,12 @@ const ProntuarioEletronico = () => {
                 </Table>
             </TableContainer>
 
-            <MedicalConsultationModal open={modalConsultaAberto} />
+            <MedicalConsultationModal
+                open={modalConsultaAberto}
+                paciente={pacienteSelecionado}
+                doutor={user}
+                onClose={() => setModalConsultaAberto(false)}
+            />
 
             {/* Carregando, se necessário */}
             {loading && (
