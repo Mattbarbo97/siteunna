@@ -1,9 +1,10 @@
-import { Button, Grid, Typography } from "@material-ui/core";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import {
     Autocomplete,
     Box,
+    Button,
     CircularProgress,
+    Grid,
     IconButton,
     Paper,
     Table,
@@ -13,6 +14,7 @@ import {
     TableHead,
     TableRow,
     TextField,
+    Typography,
     createFilterOptions,
 } from "@mui/material";
 import {
@@ -79,28 +81,25 @@ const ProntuarioEletronico = () => {
     }, []);
 
     // Função para salvar anotações do prontuário
-    const salvarAnotacoes = async () => {
-        if (!textoLivre || !pacienteSelecionado.id) {
+    const salvarProntuario = async (data) => {
+        console.log(data);
+        if (!data.anotacoes || !pacienteSelecionado.id) {
             // Adicione uma lógica para lidar com a ausência de texto
             return;
         }
         setLoading(true);
         try {
             const dados = {
-                texto: textoLivre,
+                texto: data.anotacoes,
+                exames: data.exames,
+                receitas: data.receitas,
                 data: new Date(),
                 user_id: pacienteSelecionado.id,
                 medico: user.name,
             };
-
-            const historicoCollection = collection(
-                firestore,
-                "historico_paciente"
-            );
+            const historicoCollection = collection(firestore, "prontuarios");
             await setDoc(doc(historicoCollection), dados);
-            // Limpe o campo de texto após salvar
-            setTextoLivre("");
-            // Atualize o histórico do paciente após salvar
+            setModalConsultaAberto(false);
             buscarAnotacoes();
         } catch (error) {
             console.error("Erro ao salvar anotações:", error);
@@ -115,10 +114,7 @@ const ProntuarioEletronico = () => {
         setLoading(true);
         // Buscar anotações do paciente selecionado com order by data
         try {
-            const historicoCollection = collection(
-                firestore,
-                "historico_paciente"
-            );
+            const historicoCollection = collection(firestore, "prontuarios");
             const historicoSnapshot = await getDocs(historicoCollection);
             const historicoList = historicoSnapshot.docs
                 .map((doc) => ({
@@ -154,7 +150,16 @@ const ProntuarioEletronico = () => {
     return (
         <div className="prontuario-wrapper">
             <MenuPrincipal />
-            <Box className="search-bar">
+            <Box
+                className="search-bar"
+                sx={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 2,
+                    padding: 1,
+                    maxWidth: "100%",
+                }}
+            >
                 <Autocomplete
                     {...defaultProps}
                     id="paciente"
@@ -165,6 +170,20 @@ const ProntuarioEletronico = () => {
                     limitTags={4}
                     onChange={(e, value) => {
                         if (!value) {
+                            setPacienteSelecionado({
+                                id: "",
+                                nome: "",
+                                dataNascimento: "",
+                                genero: "",
+                                telefone: "",
+                                email: "",
+                                endereco: "",
+                                numeroResidencia: "",
+                                bairro: "",
+                                cidade: "",
+                                estado: "",
+                            });
+                            setHistorico([]);
                             return;
                         }
                         setPacienteSelecionado(value);
@@ -176,7 +195,18 @@ const ProntuarioEletronico = () => {
                             variant="standard"
                         />
                     )}
+                    sx={{
+                        width: "100%",
+                    }}
                 />
+                <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={() => setModalConsultaAberto(true)}
+                    disabled={!pacienteSelecionado.id}
+                >
+                    Novo Prontuário
+                </Button>
             </Box>
             <Paper
                 className="informacoes-paciente"
@@ -276,16 +306,6 @@ const ProntuarioEletronico = () => {
                     </Grid>
                 </Grid>
             </Paper>
-
-            <Button
-                onClick={() => setModalConsultaAberto(true)}
-                variant="contained"
-                color="primary"
-                sx={{ mt: 2 }}
-            >
-                Nova Consulta
-            </Button>
-
             {/* Tabela de histórico do prontuário */}
             <TableContainer component={Paper} sx={{ mt: 2 }}>
                 <Table aria-label="Histórico do Prontuário">
@@ -308,7 +328,6 @@ const ProntuarioEletronico = () => {
                                     {takeFirst80Char(registro.texto)}
                                 </TableCell>
                                 <TableCell>
-                                    {/* Botão para visualizar detalhes do prontuário */}
                                     <IconButton
                                     // onClick={() => abrirDialogHistorico()}
                                     >
@@ -326,9 +345,9 @@ const ProntuarioEletronico = () => {
                 paciente={pacienteSelecionado}
                 doutor={user}
                 onClose={() => setModalConsultaAberto(false)}
+                handleSave={salvarProntuario}
             />
 
-            {/* Carregando, se necessário */}
             {loading && (
                 <Box
                     display="flex"

@@ -1,16 +1,22 @@
+import AddIcon from "@material-ui/icons/Add";
 import {
     Box,
     Button,
     IconButton,
     Modal,
+    Paper,
     TextField,
     Typography,
-} from "@material-ui/core";
-import AddIcon from "@material-ui/icons/Add";
-import { Paper } from "@mui/material";
+} from "@mui/material";
 import React, { useState } from "react";
 
-const MedicalConsultationModal = ({ open, onClose, paciente, doutor }) => {
+const MedicalConsultationModal = ({
+    open,
+    onClose,
+    paciente,
+    doutor,
+    handleSave,
+}) => {
     const [prescriptions, setPrescriptions] = useState([]);
     const [examRequests, setExamRequests] = useState([]);
     const [notes, setNotes] = useState("");
@@ -25,12 +31,26 @@ const MedicalConsultationModal = ({ open, onClose, paciente, doutor }) => {
 
     const handlePrescriptionChange = (index, value) => {
         const newPrescriptions = [...prescriptions];
+
+        if (value === "") {
+            newPrescriptions.splice(index, 1);
+            setPrescriptions(newPrescriptions);
+            return;
+        }
+
         newPrescriptions[index] = value;
         setPrescriptions(newPrescriptions);
     };
 
     const handleExamRequestChange = (index, value) => {
         const newExamRequests = [...examRequests];
+
+        if (value === "") {
+            newExamRequests.splice(index, 1);
+            setExamRequests(newExamRequests);
+            return;
+        }
+
         newExamRequests[index] = value;
         setExamRequests(newExamRequests);
     };
@@ -46,6 +66,8 @@ const MedicalConsultationModal = ({ open, onClose, paciente, doutor }) => {
                     top: "50%",
                     left: "50%",
                     transform: "translate(-50%, -50%)",
+                    maxHeight: "80vh",
+                    overflowY: "auto",
                 }}
             >
                 <Typography variant="h6" style={{ textAlign: "center" }}>
@@ -59,38 +81,56 @@ const MedicalConsultationModal = ({ open, onClose, paciente, doutor }) => {
                 </Typography>
                 <Box mb={2}>
                     <Typography variant="h6">Receitas</Typography>
-                    {prescriptions.map((prescription, index) => (
-                        <TextField
-                            key={index}
-                            label={`Receita ${index + 1}`}
-                            value={prescription}
-                            onChange={(e) =>
-                                handlePrescriptionChange(index, e.target.value)
-                            }
-                            fullWidth
-                            multiline
-                            rows={4}
-                        />
-                    ))}
+                    <Box
+                        display="flex"
+                        flexDirection="column"
+                        alignItems="center"
+                        gap={2}
+                    >
+                        {prescriptions.map((prescription, index) => (
+                            <TextField
+                                key={index}
+                                label={`Receita ${index + 1}`}
+                                value={prescription}
+                                onChange={(e) =>
+                                    handlePrescriptionChange(
+                                        index,
+                                        e.target.value
+                                    )
+                                }
+                                fullWidth
+                                multiline
+                            />
+                        ))}
+                    </Box>
                     <IconButton onClick={addPrescription}>
                         <AddIcon />
                     </IconButton>
                 </Box>
                 <Box mb={2}>
                     <Typography variant="h6">Pedidos de Exames</Typography>
-                    {examRequests.map((request, index) => (
-                        <TextField
-                            key={index}
-                            label={`Pedido de Exame ${index + 1}`}
-                            value={request}
-                            onChange={(e) =>
-                                handleExamRequestChange(index, e.target.value)
-                            }
-                            fullWidth
-                            multiline
-                            rows={4}
-                        />
-                    ))}
+                    <Box
+                        display="flex"
+                        flexDirection="column"
+                        alignItems="center"
+                        gap={2}
+                    >
+                        {examRequests.map((request, index) => (
+                            <TextField
+                                key={index}
+                                label={`Pedido de Exame ${index + 1}`}
+                                value={request}
+                                onChange={(e) =>
+                                    handleExamRequestChange(
+                                        index,
+                                        e.target.value
+                                    )
+                                }
+                                fullWidth
+                                multiline
+                            />
+                        ))}
+                    </Box>
                     <IconButton onClick={addExamRequest}>
                         <AddIcon />
                     </IconButton>
@@ -106,7 +146,17 @@ const MedicalConsultationModal = ({ open, onClose, paciente, doutor }) => {
                         rows={4}
                     />
                 </Box>
-                <Button variant="contained" color="primary" onClick={onClose}>
+                <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={() =>
+                        handleSave({
+                            receitas: prescriptions,
+                            exames: examRequests,
+                            anotacoes: notes,
+                        })
+                    }
+                >
                     Salvar Prontuário
                 </Button>
             </Paper>

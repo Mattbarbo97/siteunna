@@ -169,7 +169,7 @@ const MenuPrincipal = () => {
                                 >
                                     <ListItemText primary="Cadastrar" />
                                 </ListItemButton> */}
-
+                                {/* 
                                 <ListItemButton
                                     sx={{ pl: 4 }}
                                     onClick={() =>
@@ -177,7 +177,7 @@ const MenuPrincipal = () => {
                                     }
                                 >
                                     <ListItemText primary="Visualizar Usuários" />
-                                </ListItemButton>
+                                </ListItemButton> */}
 
                                 <ListItemButton
                                     sx={{ pl: 4 }}
