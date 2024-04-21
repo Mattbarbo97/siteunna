@@ -47,7 +47,6 @@ const ProntuarioEletronico = () => {
         cidade: "",
         estado: "",
     });
-    const [textoLivre, setTextoLivre] = useState("");
     const [loading, setLoading] = useState(false);
     const [historico, setHistorico] = useState([]);
     const [pacientes, setPacientes] = useState([]);
