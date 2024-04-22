@@ -32,6 +32,7 @@ import takeFirst80Char from "../../../utils/takeFirst80Char";
 import MenuPrincipal from "../MenuPrincipal";
 import MedicalConsultationModal from "./MedicalConsultationModal";
 import "./ProntuarioStyles.css";
+import ViewProntuarioModal from "./viewProntuarioModal";
 
 const ProntuarioEletronico = () => {
     const [pacienteSelecionado, setPacienteSelecionado] = useState({
@@ -51,6 +52,8 @@ const ProntuarioEletronico = () => {
     const [historico, setHistorico] = useState([]);
     const [pacientes, setPacientes] = useState([]);
     const [modalConsultaAberto, setModalConsultaAberto] = useState(false);
+    const [prontuarioSelecionado, setProntuarioSelecionado] = useState([]);
+    const [viewProntuarioModal, setViewProntuarioModal] = useState(false);
 
     const { user } = useUser();
 
@@ -82,7 +85,7 @@ const ProntuarioEletronico = () => {
     // Função para salvar anotações do prontuário
     const salvarProntuario = async (data) => {
         console.log(data);
-        if (!data.anotacoes || !pacienteSelecionado.id) {
+        if ( !pacienteSelecionado.id) {
             // Adicione uma lógica para lidar com a ausência de texto
             return;
         }
@@ -93,8 +96,9 @@ const ProntuarioEletronico = () => {
                 exames: data.exames,
                 receitas: data.receitas,
                 data: new Date(),
+                paciente: pacienteSelecionado,
                 user_id: pacienteSelecionado.id,
-                medico: user.name,
+                medico: user,
             };
             const historicoCollection = collection(firestore, "prontuarios");
             await setDoc(doc(historicoCollection), dados);
@@ -322,13 +326,16 @@ const ProntuarioEletronico = () => {
                                 <TableCell>
                                     {formatDate(registro.data.toDate())}
                                 </TableCell>
-                                <TableCell>{registro.medico}</TableCell>
+                                <TableCell>{registro.medico.name}</TableCell>
                                 <TableCell>
                                     {takeFirst80Char(registro.texto)}
                                 </TableCell>
                                 <TableCell>
                                     <IconButton
-                                    // onClick={() => abrirDialogHistorico()}
+                                        onClick={() => {
+                                            setProntuarioSelecionado(registro);
+                                            setViewProntuarioModal(true);
+                                        }}
                                     >
                                         <VisibilityIcon />
                                     </IconButton>
@@ -345,6 +352,12 @@ const ProntuarioEletronico = () => {
                 doutor={user}
                 onClose={() => setModalConsultaAberto(false)}
                 handleSave={salvarProntuario}
+            />
+
+            <ViewProntuarioModal
+                prontuario={prontuarioSelecionado}
+                open={viewProntuarioModal}
+                onClose={() => setViewProntuarioModal(false)}
             />
 
             {loading && (
