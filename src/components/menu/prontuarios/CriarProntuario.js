@@ -1,14 +1,10 @@
-import SaveIcon from "@mui/icons-material/Save";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import {
     Autocomplete,
     Box,
     Button,
     CircularProgress,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogTitle,
+    Grid,
     IconButton,
     Paper,
     Table,
@@ -18,6 +14,7 @@ import {
     TableHead,
     TableRow,
     TextField,
+    Typography,
     createFilterOptions,
 } from "@mui/material";
 import {
@@ -31,31 +28,34 @@ import React, { useCallback, useEffect, useState } from "react";
 import { useUser } from "../../../context/UserContext";
 import { firestore } from "../../../firebase";
 import formatDate from "../../../utils/formatDate";
+import takeFirst80Char from "../../../utils/takeFirst80Char";
 import MenuPrincipal from "../MenuPrincipal";
-import PedidoExame from "./PedidoExame";
+import MedicalConsultationModal from "./MedicalConsultationModal";
 import "./ProntuarioStyles.css";
-import Receituario from "./Receituario";
+import ViewProntuarioModal from "./viewProntuarioModal";
 
 const ProntuarioEletronico = () => {
-    const [pacienteSelecionado, setPacienteSelecionado] = useState({});
-    const [textoLivre, setTextoLivre] = useState("");
+    const [pacienteSelecionado, setPacienteSelecionado] = useState({
+        id: "",
+        nome: "",
+        dataNascimento: "",
+        genero: "",
+        telefone: "",
+        email: "",
+        endereco: "",
+        numeroResidencia: "",
+        bairro: "",
+        cidade: "",
+        estado: "",
+    });
     const [loading, setLoading] = useState(false);
-    const [modalPedidoExameAberto, setModalPedidoExameAberto] = useState(false);
-    const [modalReceituarioAberto, setModalReceituarioAberto] = useState(false);
     const [historico, setHistorico] = useState([]);
-    const [dialogHistoricoAberto, setDialogHistoricoAberto] = useState(false);
     const [pacientes, setPacientes] = useState([]);
+    const [modalConsultaAberto, setModalConsultaAberto] = useState(false);
+    const [prontuarioSelecionado, setProntuarioSelecionado] = useState([]);
+    const [viewProntuarioModal, setViewProntuarioModal] = useState(false);
 
     const { user } = useUser();
-
-    const toggleModalPedidoExame = () => {
-        setModalPedidoExameAberto(!modalPedidoExameAberto);
-    };
-
-    // Função de toggle para o modal de Receituário
-    const toggleModalReceituario = () => {
-        setModalReceituarioAberto(!modalReceituarioAberto);
-    };
 
     useEffect(() => {
         const firestore = getFirestore();
@@ -83,28 +83,26 @@ const ProntuarioEletronico = () => {
     }, []);
 
     // Função para salvar anotações do prontuário
-    const salvarAnotacoes = async () => {
-        if (!textoLivre || !pacienteSelecionado.id) {
+    const salvarProntuario = async (data) => {
+        console.log(data);
+        if ( !pacienteSelecionado.id) {
             // Adicione uma lógica para lidar com a ausência de texto
             return;
         }
         setLoading(true);
         try {
             const dados = {
-                texto: textoLivre,
+                texto: data.anotacoes,
+                exames: data.exames,
+                receitas: data.receitas,
                 data: new Date(),
+                paciente: pacienteSelecionado,
                 user_id: pacienteSelecionado.id,
-                medico: user.name,
+                medico: user,
             };
-
-            const historicoCollection = collection(
-                firestore,
-                "historico_paciente"
-            );
+            const historicoCollection = collection(firestore, "prontuarios");
             await setDoc(doc(historicoCollection), dados);
-            // Limpe o campo de texto após salvar
-            setTextoLivre("");
-            // Atualize o histórico do paciente após salvar
+            setModalConsultaAberto(false);
             buscarAnotacoes();
         } catch (error) {
             console.error("Erro ao salvar anotações:", error);
@@ -117,11 +115,9 @@ const ProntuarioEletronico = () => {
             return;
         }
         setLoading(true);
+        // Buscar anotações do paciente selecionado com order by data
         try {
-            const historicoCollection = collection(
-                firestore,
-                "historico_paciente"
-            );
+            const historicoCollection = collection(firestore, "prontuarios");
             const historicoSnapshot = await getDocs(historicoCollection);
             const historicoList = historicoSnapshot.docs
                 .map((doc) => ({
@@ -130,7 +126,8 @@ const ProntuarioEletronico = () => {
                 }))
                 .filter(
                     (registro) => registro.user_id === pacienteSelecionado.id
-                );
+                )
+                .sort((a, b) => b.data.toDate() - a.data.toDate());
             setHistorico(historicoList);
             console.log(historicoList);
         } catch (error) {
@@ -142,16 +139,6 @@ const ProntuarioEletronico = () => {
     useEffect(() => {
         buscarAnotacoes();
     }, [pacienteSelecionado, buscarAnotacoes]);
-
-    // Função para abrir o diálogo de histórico completo
-    const abrirDialogHistorico = () => {
-        setDialogHistoricoAberto(true);
-    };
-
-    // Função para fechar o diálogo de histórico completo
-    const fecharDialogHistorico = () => {
-        setDialogHistoricoAberto(false);
-    };
 
     const defaultProps = {
         options: pacientes,
@@ -166,7 +153,16 @@ const ProntuarioEletronico = () => {
     return (
         <div className="prontuario-wrapper">
             <MenuPrincipal />
-            <Box className="search-bar">
+            <Box
+                className="search-bar"
+                sx={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 2,
+                    padding: 1,
+                    maxWidth: "100%",
+                }}
+            >
                 <Autocomplete
                     {...defaultProps}
                     id="paciente"
@@ -177,6 +173,20 @@ const ProntuarioEletronico = () => {
                     limitTags={4}
                     onChange={(e, value) => {
                         if (!value) {
+                            setPacienteSelecionado({
+                                id: "",
+                                nome: "",
+                                dataNascimento: "",
+                                genero: "",
+                                telefone: "",
+                                email: "",
+                                endereco: "",
+                                numeroResidencia: "",
+                                bairro: "",
+                                cidade: "",
+                                estado: "",
+                            });
+                            setHistorico([]);
                             return;
                         }
                         setPacienteSelecionado(value);
@@ -188,51 +198,117 @@ const ProntuarioEletronico = () => {
                             variant="standard"
                         />
                     )}
+                    sx={{
+                        width: "100%",
+                    }}
                 />
-            </Box>
-
-            <Box className="container">
-                <Button
-                    variant="contained"
-                    onClick={toggleModalPedidoExame}
-                    startIcon={<SaveIcon />}
-                >
-                    Solicitar Exame
-                </Button>
-                <Button
-                    variant="contained"
-                    onClick={toggleModalReceituario}
-                    startIcon={<SaveIcon />}
-                >
-                    Emitir Receituário
-                </Button>
-            </Box>
-
-            {/* Campo de texto livre para anotações */}
-            <Box>
-                <TextField
-                    label="Anotações do Prontuário"
-                    multiline
-                    rows={4}
-                    value={textoLivre}
-                    onChange={(e) => setTextoLivre(e.target.value)}
-                    variant="outlined"
-                    fullWidth
-                    margin="normal"
-                />
-
-                {/* Botão para salvar as anotações no histórico */}
                 <Button
                     variant="contained"
                     color="primary"
-                    startIcon={<SaveIcon />}
-                    onClick={salvarAnotacoes}
-                    sx={{ mt: 2 }}
+                    onClick={() => setModalConsultaAberto(true)}
+                    disabled={!pacienteSelecionado.id}
                 >
-                    Salvar Anotações
+                    Novo Prontuário
                 </Button>
             </Box>
-
+            <Paper
+                className="informacoes-paciente"
+                sx={{
+                    padding: 2,
+                }}
+            >
+                <Typography
+                    style={{
+                        fontSize: "1.5rem",
+                        fontWeight: "bold",
+                    }}
+                >
+                    Informações do Paciente
+                </Typography>
+                <Grid container spacing={1}>
+                    <Grid item xs={12} sm={6}>
+                        <Box
+                            sx={{
+                                display: "flex",
+                                flexDirection: "row",
+                                gap: 2,
+                            }}
+                        >
+                            <Typography variant="h6">Nome:</Typography>
+                            <Typography variant="h6">
+                                {pacienteSelecionado.nome}
+                            </Typography>
+                        </Box>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                        <Box
+                            sx={{
+                                display: "flex",
+                                flexDirection: "row",
+                                gap: 2,
+                            }}
+                        >
+                            <Typography variant="h6">
+                                Data de Nascimento:
+                            </Typography>
+                            <Typography variant="h6">
+                                {pacienteSelecionado.dataNascimento}
+                            </Typography>
+                        </Box>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                        <Box
+                            sx={{
+                                display: "flex",
+                                flexDirection: "row",
+                                gap: 2,
+                            }}
+                        >
+                            <Typography variant="h6">Genero:</Typography>
+                            <Typography variant="h6">
+                                {pacienteSelecionado.genero}
+                            </Typography>
+                        </Box>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                        <Box
+                            sx={{
+                                display: "flex",
+                                flexDirection: "row",
+                                gap: 2,
+                            }}
+                        >
+                            <Typography variant="h6">Telefone:</Typography>
+                            <Typography variant="h6">
+                                {pacienteSelecionado.telefone}
+                            </Typography>
+                        </Box>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                        <Box
+                            sx={{
+                                display: "flex",
+                                flexDirection: "row",
+                                gap: 2,
+                            }}
+                        >
+                            <Typography variant="h6">E-mail:</Typography>
+                            <Typography variant="h6">
+                                {pacienteSelecionado.email}
+                            </Typography>
+                        </Box>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                        <Typography variant="h6">
+                            Endereço: {pacienteSelecionado.endereco} -{" "}
+                            {pacienteSelecionado.numeroResidencia} -{" "}
+                            {pacienteSelecionado.bairro} -{" "}
+                            {pacienteSelecionado.cidade} -{" "}
+                            {pacienteSelecionado.estado}
+                        </Typography>
+                    </Grid>
+                </Grid>
+            </Paper>
             {/* Tabela de histórico do prontuário */}
             <TableContainer component={Paper} sx={{ mt: 2 }}>
                 <Table aria-label="Histórico do Prontuário">
@@ -250,12 +326,16 @@ const ProntuarioEletronico = () => {
                                 <TableCell>
                                     {formatDate(registro.data.toDate())}
                                 </TableCell>
-                                <TableCell>{registro.medico}</TableCell>
-                                <TableCell>{registro.texto}</TableCell>
+                                <TableCell>{registro.medico.name}</TableCell>
                                 <TableCell>
-                                    {/* Botão para visualizar detalhes do prontuário */}
+                                    {takeFirst80Char(registro.texto)}
+                                </TableCell>
+                                <TableCell>
                                     <IconButton
-                                        onClick={() => abrirDialogHistorico()}
+                                        onClick={() => {
+                                            setProntuarioSelecionado(registro);
+                                            setViewProntuarioModal(true);
+                                        }}
                                     >
                                         <VisibilityIcon />
                                     </IconButton>
@@ -266,39 +346,20 @@ const ProntuarioEletronico = () => {
                 </Table>
             </TableContainer>
 
-            {/* Modais */}
-            <PedidoExame
-                open={modalPedidoExameAberto}
-                onClose={toggleModalPedidoExame}
-                PaperProps={{
-                    sx: {
-                        height: '100vh' // Ajusta a altura para 100vh
-                    }
-                }}
-            />
-            <Receituario
-                open={modalReceituarioAberto}
-                onClose={toggleModalReceituario}
+            <MedicalConsultationModal
+                open={modalConsultaAberto}
+                paciente={pacienteSelecionado}
+                doutor={user}
+                onClose={() => setModalConsultaAberto(false)}
+                handleSave={salvarProntuario}
             />
 
-            {/* Dialog de visualização do histórico completo */}
-            <Dialog
-                open={dialogHistoricoAberto}
-                onClose={fecharDialogHistorico}
-                maxWidth="lg"
-                fullWidth
-            >
-                <DialogTitle>Histórico Completo do Paciente</DialogTitle>
-                <DialogContent>
-                    {/* Conteúdo do histórico completo do paciente */}
-                    {/* Este conteúdo precisaria ser dinamicamente carregado com base no paciente selecionado */}
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={fecharDialogHistorico}>Fechar</Button>
-                </DialogActions>
-            </Dialog>
+            <ViewProntuarioModal
+                prontuario={prontuarioSelecionado}
+                open={viewProntuarioModal}
+                onClose={() => setViewProntuarioModal(false)}
+            />
 
-            {/* Carregando, se necessário */}
             {loading && (
                 <Box
                     display="flex"
