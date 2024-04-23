@@ -16,16 +16,22 @@ import CancelIcon from "@mui/icons-material/Cancel";
 import { useFormik } from "formik";
 import * as Yup from "yup";
 
+//value: "", key: `receita-${receitaCounter}`
+
 const validationSchema = Yup.object().shape({
     receitas: Yup.array().of(
-        Yup.string().required(
-            "O campo não pode estar vazio, se não for preencher, remova o campo."
-        )
+        Yup.object().shape({
+            value: Yup.string().required(
+                "O campo não pode estar vazio, se não for preencher, remova o campo."
+            ),
+        })
     ),
     exames: Yup.array().of(
-        Yup.string().required(
-            "O campo não pode estar vazio, se não for preencher, remova o campo."
-        )
+        Yup.object().shape({
+            value: Yup.string().required(
+                "O campo não pode estar vazio, se não for preencher, remova o campo."
+            ),
+        })
     ),
     anotacoes: Yup.string().required(
         "As anotações da consulta são obrigatórias."
@@ -39,6 +45,8 @@ const MedicalConsultationModal = ({
     doutor,
     handleSave,
 }) => {
+    const [receitaCounter, setReceitaCounter] = useState(0);
+    const [exameCounter, setExameCounter] = useState(0);
     const [confirmClear, setConfirmClear] = useState(false);
 
     const formik = useFormik({
@@ -49,6 +57,7 @@ const MedicalConsultationModal = ({
         },
         validationSchema: validationSchema,
         onSubmit: (values) => {
+            console.log(values);
             handleSave(values);
             formik.resetForm();
         },
@@ -61,7 +70,12 @@ const MedicalConsultationModal = ({
     };
 
     const addReceita = () => {
-        formik.setFieldValue("receitas", [...formik.values.receitas, ""]);
+        const newReceita = { value: "", key: `receita-${receitaCounter}` };
+        formik.setFieldValue("receitas", [
+            ...formik.values.receitas,
+            newReceita,
+        ]);
+        setReceitaCounter(receitaCounter + 1);
     };
 
     const handleDeleteExame = (index) => {
@@ -71,7 +85,9 @@ const MedicalConsultationModal = ({
     };
 
     const addExame = () => {
-        formik.setFieldValue("exames", [...formik.values.exames, ""]);
+        const newExame = { value: "", key: `exame-${exameCounter}` };
+        formik.setFieldValue("exames", [...formik.values.exames, newExame]);
+        setExameCounter(exameCounter + 1);
     };
 
     return (
@@ -96,9 +112,6 @@ const MedicalConsultationModal = ({
                     <Typography variant="subtitle1">
                         Paciente: {paciente.nome}
                     </Typography>
-                    <Typography variant="subtitle1">
-                        {/* Médico: {doutor.name} */}
-                    </Typography>
                     <form onSubmit={formik.handleSubmit}>
                         <Box mb={2}>
                             <Typography variant="h6">Receitas</Typography>
@@ -108,36 +121,51 @@ const MedicalConsultationModal = ({
                                 alignItems="center"
                                 gap={2}
                             >
-                                {formik.values.receitas.map((index) => (
-                                    <Input
-                                        key={index}
-                                        label={`Receita ${index + 1}`}
-                                        name={`receitas[${index}]`}
-                                        value={formik.values.receitas[index]}
-                                        onChange={formik.handleChange}
-                                        error={
-                                            formik.touched.receitas &&
-                                            Boolean(formik.errors.receitas)
-                                        }
-                                        endAdornment={
-                                            <InputAdornment position="end">
-                                                <IconButton
-                                                    aria-label="delete field"
-                                                    onClick={() =>
-                                                        handleDeleteReceita(
-                                                            index
-                                                        )
-                                                    }
-                                                    edge="end"
-                                                >
-                                                    <CancelIcon />
-                                                </IconButton>
-                                            </InputAdornment>
-                                        }
-                                        fullWidth
-                                        multiline
-                                    />
-                                ))}
+                                {formik.values.receitas.map(
+                                    (receita, index) => (
+                                        <Input
+                                            key={receita.key}
+                                            value={receita.value}
+                                            name={`receitas[${index}].value`}
+                                            onChange={formik.handleChange}
+                                            error={
+                                                formik.touched.receitas &&
+                                                Boolean(formik.errors.receitas)
+                                            }
+                                            endAdornment={
+                                                <InputAdornment position="end">
+                                                    <IconButton
+                                                        aria-label="delete field"
+                                                        onClick={() =>
+                                                            handleDeleteReceita(
+                                                                index
+                                                            )
+                                                        }
+                                                        edge="end"
+                                                    >
+                                                        <CancelIcon />
+                                                    </IconButton>
+                                                </InputAdornment>
+                                            }
+                                            fullWidth
+                                            multiline
+                                        />
+                                    )
+                                )}
+                                {formik.touched.receitas &&
+                                    Boolean(formik.errors.receitas) && (
+                                        <Typography
+                                            variant="subtitle2"
+                                            color="error"
+                                        >
+                                            {
+                                                formik.errors.receitas[
+                                                    formik.errors.receitas
+                                                        .length - 1
+                                                ].value
+                                            }
+                                        </Typography>
+                                    )}
                             </Box>
                             <IconButton onClick={addReceita}>
                                 <AddIcon />
@@ -153,12 +181,11 @@ const MedicalConsultationModal = ({
                                 alignItems="center"
                                 gap={2}
                             >
-                                {formik.values.exames.map((index) => (
+                                {formik.values.exames.map((exame, index) => (
                                     <Input
-                                        key={index}
-                                        label={`Pedido de Exame ${index + 1}`}
-                                        name={`exames[${index}]`}
-                                        value={formik.values.exames[index]}
+                                        key={exame.key}
+                                        value={exame.value}
+                                        name={`exames[${index}].value`}
                                         onChange={formik.handleChange}
                                         error={
                                             formik.touched.exames &&
@@ -180,6 +207,20 @@ const MedicalConsultationModal = ({
                                         fullWidth
                                     />
                                 ))}
+                                {formik.touched.exames &&
+                                    Boolean(formik.errors.exames) && (
+                                        <Typography
+                                            variant="subtitle2"
+                                            color="error"
+                                        >
+                                            {
+                                                formik.errors.exames[
+                                                    formik.errors.exames
+                                                        .length - 1
+                                                ].value
+                                            }
+                                        </Typography>
+                                    )}
                             </Box>
                             <IconButton onClick={addExame}>
                                 <AddIcon />

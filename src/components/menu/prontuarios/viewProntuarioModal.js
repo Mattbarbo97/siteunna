@@ -146,7 +146,8 @@ const ViewProntuarioModal = ({ prontuario, open, onClose }) => {
                             prontuario.receitas.map((receita, index) => (
                                 <Grid item xs={12} key={index}>
                                     <Typography variant="body1">
-                                        <b>Receita {index + 1}:</b> {receita}
+                                        <b>Receita {index + 1}:</b>{" "}
+                                        {receita.value}
                                     </Typography>
                                 </Grid>
                             ))
@@ -181,7 +182,7 @@ const ViewProntuarioModal = ({ prontuario, open, onClose }) => {
                             prontuario.exames.map((exame, index) => (
                                 <Grid item xs={12} key={index}>
                                     <Typography variant="body1">
-                                        <b>Exame {index + 1}:</b> {exame}
+                                        <b>Exame {index + 1}:</b> {exame.value}
                                     </Typography>
                                 </Grid>
                             ))
